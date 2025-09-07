@@ -22,7 +22,7 @@ async function authUser(req,res,next){
     
         const user = await userModel.findById(decoded.id)
         req.user = user
-        console.log(user);
+        console.log(user,token);
         
         
         next()

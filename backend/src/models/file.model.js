@@ -15,6 +15,10 @@ const fileSchema = new mongoose.Schema(
       enum: ["image", "document", "video", "audio", "other"],
       default: "other",
     },
+    filePath: {
+      type: String,
+      required: true
+    },
     size: {
       type: Number,
       required: true,

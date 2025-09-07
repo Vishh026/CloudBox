@@ -39,7 +39,7 @@ const registerController = async (req, res) => {
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture ,
-      },
+      },token
     });
   } catch (error) {
     console.error("Register error:", error);
@@ -74,8 +74,7 @@ const loginController = async (req, res) => {
         id: user._id,
         username: user.username,
         // profilePicture: user.profilePicture
-      },
-      token
+      },token
     });
   } catch (error) {
     console.error("Login error:", error);
