@@ -2,33 +2,26 @@ const fileModel = require("../models/file.model");
 const ApiError = require("../utilities/ApiError");
 const ApiResponse = require("../utilities/ApiResponse");
 const imagekit = require("../services/imagekit");
-const { uploadOnImagekit } = require("../services/filemanager.imagekit");
 const fs = require("fs");
-const { deletefromImagekit } = require("../services/filemanager.imagekit");
-const { buildSortStage, buildQuery } = require("../utilities/buildQuery");
+const {
+  deletefromImagekit,
+  uploadOnImagekit,
+} = require("../services/filemanager.imagekit");
+const {
+  buildSortStage,
+  buildQuery,
+  fetchFiles,
+} = require("../services/buildQuery.service");
+const { getFileById } = require("../services/file.service");
+const { determineFileType, allowedTypes } = require("../utilities/files.utils");
 
-function determineFileType(mimeType) {
-  if (mimeType.startsWith("image")) return "image";
-  if (mimeType.startsWith("video")) return "video";
-  if (mimeType.startsWith("audio")) return "audio";
 
-  const documentTypes = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "text/plain",
-  ];
-  if (documentTypes.includes(mimeType)) return "document";
-  return "other";
-}
 
-const uploadController = async (req, res) => {
+
+const uploadFile = async (req, res) => {
   try {
     if (!req.file) {
+      console.log(req.file)
       return res
         .status(400)
         .json(
@@ -36,20 +29,6 @@ const uploadController = async (req, res) => {
         );
     }
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "video/mp4",
-      "audio/mpeg",
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "text/plain",
-    ];
     if (!allowedTypes.includes(req.file.mimetype)) {
       return res
         .status(400)
@@ -100,74 +79,50 @@ const uploadController = async (req, res) => {
   }
 };
 
-const deleteFileController = async (req, res) => {
-  // get the user id from user and
-  // file id from params
-  // find fileid in db -> valiadation
-  // check ownership => file.userid === userid
-  // check if fileid in imagekit => delete
-  // delet from db => findbyIdanddelte
+const deleteFile = async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const file = await getFileById(fileId, req.user._id);
 
-  const fileId = req.params.id;
-  const userId = req.user.id;
+    if (file.imageKitFileId) {
+      try {
+        await deletefromImagekit(file.imageKitFileId);
+      } catch (error) {
+        console.log(error);
 
-  console.log("file id ", fileId);
-  console.log("user id: ", userId);
-
-  const file = await fileModel.findById(fileId);
-
-  if (!file) {
-    throw new ApiError(401, "File not found");
-  }
-
-  if (file.uploadedBy.toString() !== userId.toString()) {
-    throw new ApiError(403, "Not authorized to delete this file");
-  }
-
-  if (file.imageKitFileId) {
-    try {
-      await deletefromImagekit(file.imageKitFileId);
-    } catch (error) {
-      console.log("Imagekit delete error", error.message);
-      throw new ApiError(403, "Invalid access");
+        console.log("Imagekit delete error", error.message);
+        throw new ApiError(403, "Invalid access");
+      }
     }
+
+    await fileModel.findByIdAndDelete(fileId);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { deletedFileId: fileId }, "File deleted"));
+  } catch (err) {
+    console.error("Delete error:", err);
+    return res
+      .status(err.statusCode || 500)
+      .json(
+        new ApiError(err.statusCode || 500, err.message || "Delete failed")
+      );
   }
-
-  await fileModel.findByIdAndDelete(fileId);
-
-  res
-    .status(200)
-    .json(new ApiResponse(201, { deletedFileId: fileId }, "file deleted"));
 };
 
 const getMyFile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20, sort = "newest" } = req.query;
+
+    const { page, limit, sort } = req.query;
     const filter = { uploadedBy: userId, isTrashed: false };
+
     const sortStage = buildSortStage(sort);
 
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
-    const skip = (pageNum - 1) * limitNum;
-
-    const total = await fileModel.countDocuments(filter);
-
-    const files = await fileModel
-      .find(filter)
-      .sort(sortStage)
-      .skip(skip)
-      .limit(limitNum)
-      .select("-__v");
-
-    return res.status(200).json({
-      message: "All files fetched successfully",
-      page: pageNum,
-      limit: limitNum,
-      total,
-      hasMore: skip + files.length < total,
-      files,
-    });
+    const result = await fetchFiles({ filter, page, limit, sortStage });
+    return res
+      .status(200)
+      .json(new ApiResponse(201, result, "file fetch sucessfully"));
   } catch (error) {
     console.error("Error fetching all files:", error);
     return res.status(500).json({ message: "Server error" });
@@ -176,17 +131,15 @@ const getMyFile = async (req, res) => {
 
 const getFilterFiles = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const { page = 1, limit = 20, sort = "newest" } = req.query;
+    const userId = req.user.id;
 
-    const filter = buildQuery(req.query, userId);
+    const { page, limit, sort } = req.query;
+
     const sortStage = buildSortStage(sort);
-    console.log("filter",filter);
-    console.log("sortstage",sortStage);
-    
-    
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
+    const filter = buildQuery(req.query, userId);
+
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
 
     const total = await fileModel.countDocuments(filter);
@@ -217,6 +170,20 @@ const getFilterFiles = async (req, res) => {
   }
 };
 
+const openFile = async (req, res) => {
+  try {
+    const file = await getFileById(req.params.id, req.user._id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, file, "File fetched successfully"));
+  } catch (error) {
+    throw new ApiError(
+      error.statusCode || 500,
+       error.message || "Error in fetching file"
+    );
+  }
+};
+
 const downloadFile = async (req, res) => {
   // get the userid and fileid
   // find file in filemodel
@@ -224,19 +191,8 @@ const downloadFile = async (req, res) => {
   // genrate signedurl
   // send response
   try {
-    const userId = req.user._id; // from auth middleware
     const fileId = req.params.id;
-
-    // 1. Find file
-    const file = await fileModel.findById(fileId);
-    if (!file) {
-      throw new ApiError(404, "File not found");
-    }
-
-    // 2. Check ownership
-    if (file.uploadedBy.toString() !== userId.toString()) {
-      throw new ApiError(403, "Unauthorized to access this file");
-    }
+    const file = await getFileById(fileId, req.user._id);
 
     // 3. Generate signed URL
     const signedUrl = imagekit.url({
@@ -264,10 +220,53 @@ const downloadFile = async (req, res) => {
   }
 };
 
+const renameFile = async(req,res) => {
+  try {
+    const { newName} = req.body;
+    
+    const fileId = req.params.id;
+    const file = await getFileById(fileId, req.user._id);
+
+    // 1. Validate input
+    if(!fileId|| !newName || newName.trim() === ""){
+      throw new ApiError(400,"File ID ad new name is required")
+    }
+
+    // 2. Check name conflict in the same folder
+    const conflict = await fileModel.findOne({
+      parentFolder : file.parentFolder,
+      fileName: newName,
+      userId: req.user._id
+    })
+
+    if(conflict){
+      throw new ApiError(400, "A file/folder with this name already exists")
+    }
+
+    
+// update the filename
+    file.fileName = newName
+    await file.save()
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "File renamed sucessfully"));
+  } catch (err) {
+    console.log(err)
+    return res
+      .status(err.statusCode || 500)
+      .json(
+        new ApiError(err.statusCode || 500, err.message || "Rename failed")
+      );
+  }
+}
+
 module.exports = {
-  uploadController,
-  deleteFileController,
+  uploadFile,
+  deleteFile,
   getMyFile,
   downloadFile,
   getFilterFiles,
+  openFile,
+  renameFile
 };

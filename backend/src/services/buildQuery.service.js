@@ -1,3 +1,5 @@
+const fileModel = require('../models/file.model')
+
 const buildQuery = (query,userId) => {
     const {
       type,
@@ -8,7 +10,6 @@ const buildQuery = (query,userId) => {
     } = query;
 
     const filter = { uploadedBy: userId, isTrashed: false };
-
 
     if(type){
         filter.type = type
@@ -21,7 +22,7 @@ const buildQuery = (query,userId) => {
             filter.size.$gte = Number(minSize)
         }
         if(maxSize){
-            filter.size.$gte = Number(maxSize)
+            filter.size.$lte = Number(maxSize)
         }
     }
 
@@ -36,7 +37,7 @@ const buildQuery = (query,userId) => {
     }
 
     if(search){
-        filter.fileName - { $regex : search,$options : "i"}
+        filter.fileName = { $regex : search,$options : "i"}
     }
 
     return filter;
@@ -51,4 +52,27 @@ const buildSortStage = (sort) => {
     return { createdAt: 1}
 }
 
-module.exports = { buildQuery,buildSortStage}
+const fetchFiles = async({filter ,page = 1, limit = 20, sortStage}) => {
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await fileModel.countDocuments(filter);
+
+    const files = await fileModel
+      .find(filter)
+      .sort(sortStage)
+      .skip(skip)
+      .limit(limitNum)
+      .select("-__v");
+
+    return {
+    page: pageNum,
+    limit: limitNum,
+    total,
+    hasMore: skip + files.length < total,
+    files,
+  };
+}
+
+module.exports = { buildQuery,buildSortStage,fetchFiles}
