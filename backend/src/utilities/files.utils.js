@@ -13,11 +13,14 @@ function determineFileType(mimeType) {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "text/plain",
   ];
-  
 
-  documentTypes.includes(mimeType) ? "document" : "other"
+  if (documentTypes.includes(mimeType)) {
+    return "document";
+  }
 
+  return "other";
 }
+
 
 const allowedTypes = [
       "image/jpeg",

@@ -4,7 +4,7 @@ const router = express.Router();
 const {upload }= require('../middleware/upload.middleware')
 
 // creating router for authentication
-router.post('/register',authController.registerController )
+router.post('/register',upload.single('file'),authController.registerController )
 router.post('/login',authController.loginController )
 
 module.exports = router;

@@ -14,14 +14,12 @@ const {
 } = require("../services/buildQuery.service");
 const { getFileById } = require("../services/file.service");
 const { determineFileType, allowedTypes } = require("../utilities/files.utils");
-
-
-
+const { generateShareToken } = require("../utilities/TokenGenrator");
 
 const uploadFile = async (req, res) => {
   try {
     if (!req.file) {
-      console.log(req.file)
+      console.log(req.file);
       return res
         .status(400)
         .json(
@@ -66,6 +64,8 @@ const uploadFile = async (req, res) => {
       imageKitFileId: fileData.fileId,
       uploadedBy: req.user?.id || null,
       folder: req.body.folderId || null,
+     isPublic:false,
+     shareToken: null
     });
 
     return res
@@ -179,7 +179,7 @@ const openFile = async (req, res) => {
   } catch (error) {
     throw new ApiError(
       error.statusCode || 500,
-       error.message || "Error in fetching file"
+      error.message || "Error in fetching file"
     );
   }
 };
@@ -220,44 +220,98 @@ const downloadFile = async (req, res) => {
   }
 };
 
-const renameFile = async(req,res) => {
+const renameFile = async (req, res) => {
   try {
-    const { newName} = req.body;
-    
+    const { newName } = req.body;
+
     const fileId = req.params.id;
     const file = await getFileById(fileId, req.user._id);
 
     // 1. Validate input
-    if(!fileId|| !newName || newName.trim() === ""){
-      throw new ApiError(400,"File ID ad new name is required")
+    if (!fileId || !newName || newName.trim() === "") {
+      throw new ApiError(400, "File ID ad new name is required");
     }
 
     // 2. Check name conflict in the same folder
     const conflict = await fileModel.findOne({
-      parentFolder : file.parentFolder,
+      parentFolder: file.parentFolder,
       fileName: newName,
-      userId: req.user._id
-    })
+      userId: req.user._id,
+    });
 
-    if(conflict){
-      throw new ApiError(400, "A file/folder with this name already exists")
+    if (conflict) {
+      throw new ApiError(400, "A file/folder with this name already exists");
     }
 
-    
-// update the filename
-    file.fileName = newName
-    await file.save()
+    // update the filename
+    file.fileName = newName;
+    await file.save();
 
     return res
       .status(200)
       .json(new ApiResponse(200, "File renamed sucessfully"));
   } catch (err) {
-    console.log(err)
+    console.log(err);
     return res
       .status(err.statusCode || 500)
       .json(
         new ApiError(err.statusCode || 500, err.message || "Rename failed")
       );
+  }
+};
+
+const togglePublic = async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const file = await getFileById(fileId, req.user._id);
+    if (!file.isPublic) {
+      
+      (file.isPublic = true), 
+      (file.shareToken = generateShareToken());
+    } else {
+      (file.isPublic = false), (file.shareToken = null);
+    }
+
+    await file.save();
+
+    res.status(200).json(
+      new ApiResponse(201, {
+        message: `file IS NOW ${file.isPublic ? "public" : "private"}`,
+        shareLink: file.isPublic
+          ? `http://localhost:3000/api/file/share/${file.shareToken}`
+          : null,
+      })
+    );
+  } catch (error) {
+    console.log(error)
+    throw new ApiError(400, error.message);
+  }
+}
+
+const getPublicFile = async (req, res,next) => {
+  try {
+    const shareToken = req.params.shareToken;
+    console.log("shretoken", shareToken);
+
+    const file = await fileModel.findOne({ sharetoken: shareToken });
+    if (!file) {
+      throw new ApiError(401, "File not found");
+    }
+    if (!file.isPublic) {
+      throw new ApiError(401, "File has been private");
+    }
+
+    res.status(200).json(
+      new ApiResponse(201, {
+      fileName: file.fileName,
+      url: file.url,
+      size: file.size,
+      type: file.type,
+    },
+    shareToken)
+    )
+  } catch (error) {
+    next(error)
   }
 }
 
@@ -268,5 +322,7 @@ module.exports = {
   downloadFile,
   getFilterFiles,
   openFile,
-  renameFile
+  renameFile,
+  togglePublic,
+  getPublicFile,
 };

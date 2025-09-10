@@ -15,4 +15,7 @@ router.get('/filtered',authUser,fileManagerController.getFilterFiles)
 router.get('/openFile/:id',authUser,fileManagerController.openFile)
 router.patch('/:id/rename',authUser,fileManagerController.renameFile)
 
+router.patch('/:id/toggle-public',authUser,fileManagerController.togglePublic)
+router.get('/share/:token',fileManagerController.getPublicFile)
+
 module.exports = router;
