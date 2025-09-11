@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { registerUser } from "../../Routes/Auth";
+import { registerUser } from "../Routes/Auth";
 
 const Register = () => {
-    const navigate = useNavigate()
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
@@ -15,14 +15,14 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async (data) => {
-  try {
-    const res = await registerUser(data);
-    console.log(res.data);
-    navigate('/login')
-  } catch (err) {
-    alert(err.message || "Registration failed");
-  }
-};
+    try {
+      const res = await registerUser(data);
+      console.log(res.data);
+      navigate("/login");
+    } catch (err) {
+      alert(err.message || "Registration failed");
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
@@ -34,7 +34,9 @@ const Register = () => {
               C
             </div>
           </div>
-          <h1 className="text-2xl font-semibold text-gray-800">Create Account</h1>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Create Account
+          </h1>
           <p className="text-gray-500 text-sm mt-1">Join CloudBoxDrive today</p>
         </div>
 
@@ -46,7 +48,9 @@ const Register = () => {
             {...register("fullname", { required: "Full name is required" })}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
           />
-          {errors.fullname && <p className="text-red-500 text-xs">{errors.fullname.message}</p>}
+          {errors.fullname && (
+            <p className="text-red-500 text-xs">{errors.fullname.message}</p>
+          )}
 
           <input
             type="text"
@@ -54,7 +58,9 @@ const Register = () => {
             {...register("username", { required: "Username is required" })}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
           />
-          {errors.username && <p className="text-red-500 text-xs">{errors.username.message}</p>}
+          {errors.username && (
+            <p className="text-red-500 text-xs">{errors.username.message}</p>
+          )}
 
           <input
             type="url"
@@ -69,7 +75,9 @@ const Register = () => {
             {...register("email", { required: "Email is required" })}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
           />
-          {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-red-500 text-xs">{errors.email.message}</p>
+          )}
 
           {/* Password */}
           <div className="relative">
@@ -87,9 +95,9 @@ const Register = () => {
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
-          {errors.password && <p className="text-red-500 text-xs">{errors.password.message}</p>}
-
-          
+          {errors.password && (
+            <p className="text-red-500 text-xs">{errors.password.message}</p>
+          )}
 
           {/* Button */}
           <button
@@ -103,7 +111,10 @@ const Register = () => {
         {/* Footer */}
         <p className="text-center text-gray-500 text-sm mt-6">
           Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 hover:underline font-medium">
+          <Link
+            to="/login"
+            className="text-blue-600 hover:underline font-medium"
+          >
             Sign in
           </Link>
         </p>

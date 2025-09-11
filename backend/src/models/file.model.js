@@ -23,7 +23,7 @@ const fileSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    folder: {
+    folderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Folder",
       default: null, // null = root directory
@@ -56,13 +56,28 @@ const fileSchema = new mongoose.Schema(
     shareToken: {
       type:String,
       default:false
-    }
+    },
+    collaborators : [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        role: {
+          type:String,
+          enum:["read","edit"],
+          default:"read"
+        }
+      }
+    ]
   },
   {
     timestamps: true,
   }
 );
 
-const file = mongoose.model("file", fileSchema);
+fileSchema.index({ folderId: 1})
+
+const file = mongoose.model("File", fileSchema);
 
 module.exports = file;

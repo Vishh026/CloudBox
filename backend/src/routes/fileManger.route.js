@@ -1,8 +1,8 @@
 const express = require('express');
-const {authUser} = require('../middleware/auth.middleware')
+const {authUser, checkOwner} = require('../middleware/auth.middleware')
 const router = express.Router()
 const {upload} = require('../middleware/upload.middleware');
-const fileManagerController = require('../controllers/fileManger.Controller')
+const fileManagerController = require('../controllers/file.controller')
 
 
 // creating router for authentication
@@ -16,6 +16,10 @@ router.get('/openFile/:id',authUser,fileManagerController.openFile)
 router.patch('/:id/rename',authUser,fileManagerController.renameFile)
 
 router.patch('/:id/toggle-public',authUser,fileManagerController.togglePublic)
-router.get('/share/:token',fileManagerController.getPublicFile)
+router.get('/share/:shareToken',fileManagerController.getPublicFile)
+router.post('/:id/add-collaborators',authUser,checkOwner,fileManagerController.addcollaborators)
+
+
+
 
 module.exports = router;

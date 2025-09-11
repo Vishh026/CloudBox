@@ -1,10 +1,13 @@
 import React from 'react'
+// import MainRoutes from './Routes/MainRoutes'
+import Home from './pages/Home'
 import MainRoutes from './Routes/MainRoutes'
 
 const App = () => {
   return (
     <div>
-      <MainRoutes />
+     
+     <MainRoutes />
     </div>
   )
 }
