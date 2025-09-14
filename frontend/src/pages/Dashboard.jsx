@@ -1,30 +1,61 @@
-import Sidebar from "../pages/components/Sidebar";
-import Topnav from "../pages/components/Topnav";
-import FileList from "../pages/components/FileList";
+import { Upload, FolderPlus, FileText, Trash2, HardDrive } from "lucide-react";
+import ActionBox from "../pages/components/ActionButton";
+import FileCard from "../pages/components/FileCart";
+import UploadComponent from "../pages/components/UploadComponent";
+import { useEffect, useState } from "react";
+import { getTodaysFiles } from "../services/FileService";
+import FileTable from "./components/FileTable";
+import RecentFiles from "./components/RecentFiles";
 
 const Dashboard = () => {
+  const [files, setFiles] = useState([]);
+
+  const loadFiles = async () => {
+    try {
+      const fetchedFiles = await getTodaysFiles();
+      setFiles(fetchedFiles || []);
+    } catch (err) {
+      console.error("Error fetching today's files:", err);
+      setFiles([]);
+    }
+  };
+
+  useEffect(() => {
+    loadFiles();
+  }, []);
+
   return (
-    <div className="h-screen flex bg-white">
-      {/* Sidebar - fixed */}
-      <div className="fixed top-0 left-0 h-full w-60 border-r bg-white shadow-sm z-10">
-        <Sidebar />
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        <p className="text-gray-400">Welcome back! Here’s what’s happening today.</p>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col ml-60">
-        {/* Topnav - fixed */}
-        <div className="fixed top-0 left-60 right-0 h-16 border-b bg-white shadow-sm z-10">
-          <Topnav />
-        </div>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <UploadComponent onSuccess={loadFiles} />
+        <ActionBox icon={<FolderPlus />} text="New Folder" />
+        <ActionBox icon={<FileText />} text="New File" />
+        <ActionBox icon={<Trash2 />} text="Trash" />
+        <ActionBox icon={<HardDrive />} text="Storage" />
+      </div>
 
-        {/* FileList with padding (to avoid overlap) */}
-        <div className="flex-1 overflow-y-auto pt-16 p-6 bg-gray-50">
-          <FileList />
+
+      <RecentFiles />
+      {/* File Table */}
+      <FileTable />
+
+      {/* Storage Usage */}
+      <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
+        <h3 className="text-lg font-semibold text-white mb-2">Storage</h3>
+        <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+          <div className="bg-blue-500 h-3 w-2/3"></div>
         </div>
+        <p className="text-sm text-gray-400 mt-2">6.5 GB of 10 GB used</p>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
-

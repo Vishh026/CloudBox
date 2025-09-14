@@ -5,9 +5,8 @@ import MainRoutes from './Routes/MainRoutes'
 
 const App = () => {
   return (
-    <div>
-     
-     <MainRoutes />
+     <div className="h-screen w-screen">
+      <MainRoutes />
     </div>
   )
 }

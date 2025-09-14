@@ -7,13 +7,15 @@ const fileManagerController = require('../controllers/file.controller')
 
 // creating router for authentication
 router.post('/upload',authUser,upload.single('file'),fileManagerController.uploadFile)
+router.get("/today", authUser, fileManagerController.getTodaysFiles);
 router.delete('/my-files/:id',authUser,fileManagerController.deleteFile) 
-router.get('/my-files/:id',authUser)
 router.get('/my-files',authUser,fileManagerController.getMyFile)
-router.get('/my-files/download/:id',authUser,fileManagerController.downloadFile)
+router.get('/download/:id',authUser,fileManagerController.downloadFile)
 router.get('/filtered',authUser,fileManagerController.getFilterFiles)
 router.get('/openFile/:id',authUser,fileManagerController.openFile)
 router.patch('/:id/rename',authUser,fileManagerController.renameFile)
+
+router.get('/copy-link/:id/',authUser,fileManagerController.copyLink)
 
 router.patch('/:id/toggle-public',authUser,fileManagerController.togglePublic)
 router.get('/share/:shareToken',fileManagerController.getPublicFile)

@@ -4,12 +4,9 @@ const jwt = require("jsonwebtoken");
 
 const registerController = async (req, res) => {
   try {
-    const { username, email, password,profilePicture } = req.body;
-    console.log(req.body);
-    
-    
-    
-    if (!username || !email || !password || !profilePicture) {
+    const { username, email, password, profilePicture, fullname } = req.body;
+
+    if (!username || !email || !password || !fullname) {
       return res.status(400).json({ message: "All feilds are required" });
     }
     const existingUser = await userModel.findOne({ email });
@@ -18,28 +15,34 @@ const registerController = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("hashedPassword", hashedPassword);
 
     const user = await userModel.create({
+      fullname,
       username,
       email,
       password: hashedPassword,
       profilePicture: profilePicture || "",
     });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-    console.log("TOKEN", token);
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {expiresIn:'7d'});
 
-    res.cookie("token", token);
+    res.cookie("token", token,{
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.status(201).json({
       message: "User registered successfully",
       user: {
         id: user._id,
         username: user.username,
+        fullname: user.fullname,
         email: user.email,
-        profilePicture: user.profilePicture ,
-      },token
+        profilePicture: user.profilePicture,
+      },
+      token,
     });
   } catch (error) {
     console.error("Register error:", error);
@@ -50,12 +53,12 @@ const registerController = async (req, res) => {
 const loginController = async (req, res) => {
   try {
     const { identifier, password } = req.body;
-    
+
     if (!identifier || !password) {
       return res.status(400).json({ message: "All feilds are required" });
     }
     const user = await userModel.findOne({
-      $or: [{ email: identifier }, { username : identifier }],
+      $or: [{ email: identifier }, { username: identifier }],
     });
     if (!user) {
       return res.status(400).json({ message: "User does not exist" });
@@ -66,7 +69,6 @@ const loginController = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-    
 
     return res.status(200).json({
       message: "Login successful",
@@ -74,7 +76,8 @@ const loginController = async (req, res) => {
         id: user._id,
         username: user.username,
         // profilePicture: user.profilePicture
-      },token
+      },
+      token,
     });
   } catch (error) {
     console.error("Login error:", error);

@@ -5,28 +5,35 @@ const buildQuery = (query, userId) => {
 
   const filter = { uploadedBy: userId, isTrashed: false };
 
-  if (type) {
-    if (type === "image") {
-      filter.mimeType = { $regex: /^image\// };
-    } else if (type === "video") {
-      filter.mimeType = { $regex: /^video\// };
-    } else if (type === "audio") {
-      filter.mimeType = { $regex: /^audio\// };
-    } else if (type === "document") {
-      filter.mimeType = {
-        $in: [
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "application/vnd.ms-excel",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "application/vnd.ms-powerpoint",
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-          "text/plain",
-        ],
-      };
-    }
-  }
+  if (query.name) {
+  filter.fileName = { $regex: query.name, $options: "i" }; // filename only
+}
+
+if (query.search) {
+  filter.$or = [
+    { fileName: { $regex: query.search, $options: "i" } },
+    { mimeType: { $regex: query.search, $options: "i" } },
+  ];
+}
+
+if (query.type) {
+  if (query.type === "image") filter.mimeType = { $regex: /^image\// };
+  else if (query.type === "video") filter.mimeType = { $regex: /^video\// };
+  else if (query.type === "audio") filter.mimeType = { $regex: /^audio\// };
+  else if (query.type === "document")
+    filter.mimeType = {
+      $in: [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+      ],
+    };
+}
 
   if (minSize || maxSize) {
     filter.size = {};

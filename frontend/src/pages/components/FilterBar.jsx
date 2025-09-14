@@ -1,97 +1,142 @@
+// src/pages/components/FilterBar.jsx
 import { useState } from "react";
 
 const FilterBar = ({ onFilter }) => {
-  const [filters, setFilters] = useState({
-    type: "",
-    size: "",
-    date: "",
-    sort: "",
-    search: "",
-  });
+  const [name, setName] = useState(""); // file name search
+  const [search, setSearch] = useState(""); // optional global search
+  const [type, setType] = useState(""); // mime type mapping
+  const [minSize, setMinSize] = useState("");
+  const [maxSize, setMaxSize] = useState("");
+  const [date, setDate] = useState("");
+  const [sort, setSort] = useState("newest");
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const updated = { ...filters, [name]: value };
-    setFilters(updated);
+  const handleApply = () => {
+    onFilter({
+      name: name || undefined, // filename only
+      search: search || undefined, // optional: global
+      type: type || undefined, // mapped to mimeType regex in backend
+      minSize: minSize ? Number(minSize) * 1024 * 1024 : undefined,
+      maxSize: maxSize ? Number(maxSize) * 1024 * 1024 : undefined,
+      date: date ? new Date(date).toISOString() : undefined,
+      sort,
+    });
+  };
 
-    // 🔄 Convert frontend-friendly filters → backend params
-    let query = { ...updated };
-
-    if (updated.size === "small") {
-      query.minSize = 0;
-      query.maxSize = 1 * 1024 * 1024; // < 1MB
-    } else if (updated.size === "medium") {
-      query.minSize = 1 * 1024 * 1024;
-      query.maxSize = 10 * 1024 * 1024; // 1MB - 10MB
-    } else if (updated.size === "large") {
-      query.minSize = 10 * 1024 * 1024; // > 10MB
-    }
-
-    delete query.size; // remove temp field
-    onFilter(query); // send to parent
+  const handleReset = () => {
+    setName("");
+    setSearch("");
+    setType("");
+    setMinSize("");
+    setMaxSize("");
+    setDate("");
+    setSort("newest");
+    onFilter({});
   };
 
   return (
-    <div className="bg-white shadow-sm border-b flex gap-3 p-3 items-center">
-      {/* File Type */}
-      <select
-        name="type"
-        value={filters.type}
-        onChange={handleChange}
-        className="border rounded px-3 py-1 text-sm"
-      >
-        <option value="">File Type</option>
-        <option value="image">Images</option>
-        <option value="video">Videos</option>
-        <option value="audio">Audio</option>
-        <option value="document">Documents</option>
-      </select>
+    <div className="space-y-4">
+      {/* File Name */}
+      <div>
+        <label className="block text-sm mb-1">File Name</label>
+        <input
+          type="text"
+          placeholder="Enter file name..."
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+        />
+      </div>
+
+      {/* Global Search */}
+      <div>
+        <label className="block text-sm mb-1">Search (name/mime)</label>
+        <input
+          type="text"
+          placeholder="Search files..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+        />
+      </div>
+
+      {/* Type (MIME) */}
+      <div>
+        <label className="block text-sm mb-1">File Type</label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+        >
+          <option value="">All</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="audio">Audio</option>
+          <option value="document">Documents</option>
+        </select>
+      </div>
 
       {/* Size */}
-      <select
-        name="size"
-        value={filters.size}
-        onChange={handleChange}
-        className="border rounded px-3 py-1 text-sm"
-      >
-        <option value="">Size</option>
-        <option value="small">Small (&lt;1MB)</option>
-        <option value="medium">1MB - 10MB</option>
-        <option value="large">&gt;10MB</option>
-      </select>
+      <div>
+        <label className="block text-sm mb-1">Size (MB)</label>
+        <div className="flex space-x-2">
+          <input
+            type="number"
+            placeholder="Min"
+            value={minSize}
+            onChange={(e) => setMinSize(e.target.value)}
+            className="w-1/2 px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+          />
+          <input
+            type="number"
+            placeholder="Max"
+            value={maxSize}
+            onChange={(e) => setMaxSize(e.target.value)}
+            className="w-1/2 px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+          />
+        </div>
+      </div>
 
       {/* Date */}
-      <input
-        type="date"
-        name="date"
-        value={filters.date}
-        onChange={handleChange}
-        className="border rounded px-3 py-1 text-sm"
-      />
+      <div>
+        <label className="block text-sm mb-1">Uploaded After</label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+        />
+      </div>
 
       {/* Sort */}
-      <select
-        name="sort"
-        value={filters.sort}
-        onChange={handleChange}
-        className="border rounded px-3 py-1 text-sm"
-      >
-        <option value="">Sort By</option>
-        <option value="newest">Newest</option>
-        <option value="oldest">Oldest</option>
-        <option value="sizeAsc">Size (Small → Large)</option>
-        <option value="sizeDesc">Size (Large → Small)</option>
-      </select>
+      <div>
+        <label className="block text-sm mb-1">Sort By</label>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none"
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="sizeAsc">Size: Small → Large</option>
+          <option value="sizeDesc">Size: Large → Small</option>
+        </select>
+      </div>
 
-      {/* Search */}
-      <input
-        type="text"
-        name="search"
-        placeholder="Search files..."
-        value={filters.search}
-        onChange={handleChange}
-        className="border rounded px-3 py-1 text-sm"
-      />
+      {/* Buttons */}
+      <div className="flex space-x-2">
+        <button
+          onClick={handleApply}
+          className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium"
+        >
+          Apply
+        </button>
+        <button
+          onClick={handleReset}
+          className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium"
+        >
+          Reset
+        </button>
+      </div>
     </div>
   );
 };
